@@ -57,7 +57,6 @@ public class anatomyImporter {
 
             manager.applyChanges(changes);
 
-            //System.out.println("changes applied - URI changed");
 
             //create oldURI (EFO_xxxxxxx) as a child of 'obsolete class' http://www.geneontology.org/formats/oboInOwl#ObsoleteClass
             OWLClass parentCls = factory.getOWLClass(IRI.create("http://www.geneontology.org/formats/oboInOwl#ObsoleteClass"));
@@ -70,22 +69,15 @@ public class anatomyImporter {
             //fetch label, create a clean string of obsolete_clsLabel
             for(OWLAnnotation annotation : newCls.getAnnotations(localEFO, factory.getRDFSLabel())){
                 if(annotation.getValue() instanceof OWLLiteral){
-                    String labelStr = ("obsolete_" + annotation.getValue().toString());
-                    String newLabel = labelStr.replace("\"", "");
-                    String cleanLabel = newLabel.replace("^^xsd:string","");
-
-                    //System.out.println(cleanLabel);
-
-                    OWLAnnotation labelAnno = factory.getOWLAnnotation(factory.getOWLAnnotationProperty(OWLRDFVocabulary.RDFS_LABEL.getIRI()),factory.getOWLLiteral(cleanLabel));
+                    String labelStr = ("obsolete_" + ((OWLLiteral) annotation.getValue()).getLiteral());
+                    //System.out.print(labelStr);
+                    OWLAnnotation labelAnno = factory.getOWLAnnotation(factory.getOWLAnnotationProperty(OWLRDFVocabulary.RDFS_LABEL.getIRI()),factory.getOWLLiteral(labelStr));
                     OWLAnnotationAssertionAxiom labelAnnoAx = factory.getOWLAnnotationAssertionAxiom(obsoleteCls.getIRI(), labelAnno);
-                    //System.out.println("add label axiom is " + labelAnnoAx);
 
                     manager.addAxiom(localEFO, labelAnnoAx);
-                    System.out.println(labelAnnoAx);
 
                 }
             }
-            //System.out.println(obsoleteCls);
 
             //create 'term replaced by' annotation property http://purl.obolibrary.org/obo/IAO_0100001
             OWLAnnotationProperty replacedBy = factory.getOWLAnnotationProperty(IRI.create("http://purl.obolibrary.org/obo/IAO_0100001"));
@@ -94,6 +86,12 @@ public class anatomyImporter {
             axiomToAdd.add(new AddAxiom(localEFO, replaceAx));
 
             //and others...
+
+            //add reason for obsolescence
+            OWLAnnotationProperty reason = factory.getOWLAnnotationProperty(IRI.create("http://www.ebi.ac.uk/efo/reason_for_obsolescence"));
+            OWLLiteral reasonTxt = factory.getOWLLiteral("use " + newURI + " instead.");
+            OWLAnnotationAssertionAxiom reasonAx = factory.getOWLAnnotationAssertionAxiom(reason, obsoleteCls.getIRI(), reasonTxt);
+            axiomToAdd.add(new AddAxiom(localEFO, reasonAx));
 
             //obsolete in version [2.78] Nov.2016
             OWLAnnotationProperty obsoleteInVersion = factory.getOWLAnnotationProperty(IRI.create("http://www.ebi.ac.uk/efo/obsoleted_in_version"));
@@ -108,10 +106,8 @@ public class anatomyImporter {
             OWLAnnotationAssertionAxiom obsoleteFlagAx = factory.getOWLAnnotationAssertionAxiom(orgClassFlag, obsoleteCls.getIRI(), obsoleteFlag);
             axiomToAdd.add(new AddAxiom(localEFO, obsoleteFlagAx));
 
-
-
         }
-        //System.out.println(axiomToAdd);
+
         manager.applyChanges(axiomToAdd);
         manager.saveOntology(localEFO);
         System.out.println("done");
